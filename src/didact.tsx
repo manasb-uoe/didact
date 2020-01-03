@@ -1,10 +1,10 @@
 import * as React from 'react';
 
 type RequestIdleCallbackHandle = any;
-type RequestIdleCallbackOptions = {
+interface RequestIdleCallbackOptions {
 	timeout: number;
 };
-type RequestIdleCallbackDeadline = {
+interface RequestIdleCallbackDeadline {
 	readonly didTimeout: boolean;
 	timeRemaining: (() => number);
 };
