@@ -5,14 +5,17 @@ import Didact from './didact';
 
 /** @jsx Didact.createElement */
 function Counter() {
-    const [state, setState] = Didact.useState(1);
+  const [count, setCount] = Didact.useState(1);
+  Didact.useEffect(() => {
+    console.log('called effect');
+  }, count);
 
   return (
     <div>
       <h1>
-        Count: {state}
+        Count: {count}
       </h1>
-      <button onClick={() => setState(c => c + 1)}>Increment counter</button>
+      <button onClick={() => setCount(c => c + 1)}>Increment counter</button>
     </div>
   )
 }

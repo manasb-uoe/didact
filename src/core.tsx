@@ -21,11 +21,6 @@ declare global {
 
 type DomNode = HTMLElement | Text;
 
-interface Hook {
-  state: any;
-  queue: any[]
-}
-
 interface Fiber {
   props: any,
   alternate: Fiber,
@@ -35,7 +30,7 @@ interface Fiber {
   parent?: Fiber,
   child?: Fiber,
   sibling?: Fiber,
-  hooks?: Hook[]
+  hooks?: any[]
 }
 
 enum FiberType {
