@@ -89,6 +89,12 @@ const isProperty = key => key !== "children" && !isEvent(key);
 const isNew = (prev, next) => key => prev[key] !== next[key];
 const isGone = (prev, next) => key => !(key in next);
 
+function convertStyleObjectToCssString(styleObj: React.CSSProperties) {
+  return Object.entries(styleObj).reduce((acc, [key, value]) => {
+    return acc + `${key.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`)}:${value};`
+  }, "");
+} 
+
 function updateDom(domNode: DomNode, prevProps, nextProps) {
   //Remove old or changed event listeners
   Object.keys(prevProps)
@@ -121,7 +127,11 @@ function updateDom(domNode: DomNode, prevProps, nextProps) {
     .filter(isProperty)
     .filter(isNew(prevProps, nextProps))
     .forEach(name => {
-      domNode[name] = nextProps[name]
+      if (name === 'style') {
+        domNode[name] = convertStyleObjectToCssString(nextProps[name]);
+      } else {
+        domNode[name] = nextProps[name]
+      }
     });
 
   // Add event listeners
@@ -181,7 +191,7 @@ export function render(element: React.ReactElement, container: DomNode) {
   didactState.deletions = [];
   didactState.nextUnitOfWork = didactState.wipRoot;
 }
-      
+
 function commitRoot() {
   didactState.deletions.forEach(commitWork);
   if (didactState.wipRoot) {
@@ -263,7 +273,7 @@ function updateFunctionComponent(fiber: Fiber) {
 
   // invoke the function with props to get children
   const children = [(fiber.type as Function)(fiber.props)]
-  
+
   reconcileChildren(fiber, children)
 }
 
@@ -339,7 +349,7 @@ function reconcileChildren(wipFiber: Fiber, elements: React.ReactElement[]) {
 
 function workLoop(deadline: RequestIdleCallbackDeadline) {
   let shouldYield = false;
-  
+
   while (didactState.nextUnitOfWork && !shouldYield) {
     didactState.nextUnitOfWork = performUnitOfWork(didactState.nextUnitOfWork);
     shouldYield = deadline.timeRemaining() < 1;

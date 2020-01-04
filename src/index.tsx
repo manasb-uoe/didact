@@ -12,7 +12,7 @@ function Counter() {
 
   return (
     <div>
-      <h1>
+      <h1 style={{color: "red !important", fontWeight: "lighter"}}>
         Count: {count}
       </h1>
       <button onClick={() => setCount(c => c + 1)}>Increment counter</button>
