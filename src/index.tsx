@@ -5,7 +5,7 @@ import Didact from './didact';
 
 /** @jsx Didact.createElement */
 function Counter() {
-  const [state, setState] = Didact.useState(1);
+    const [state, setState] = Didact.useState(1);
 
   return (
     <div>

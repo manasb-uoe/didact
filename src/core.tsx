@@ -19,7 +19,7 @@ declare global {
   }
 }
 
-type Dom = HTMLElement | Text;
+type DomNode = HTMLElement | Text;
 
 interface Hook {
   state: any;
@@ -30,7 +30,7 @@ interface Fiber {
   props: any,
   alternate: Fiber,
   type?: FiberType | Function,
-  dom?: Dom,
+  dom?: DomNode,
   effectTag?: FiberEffectTag,
   parent?: Fiber,
   child?: Fiber,
@@ -48,7 +48,7 @@ enum FiberEffectTag {
   Placement = "PLACEMENT"
 }
 
-export function createElement(type: FiberType, props, ...children): Partial<React.ReactElement> {
+export function createElement(type: string, props, ...children): Partial<React.ReactElement> {
   return {
     type,
     props: {
@@ -75,35 +75,73 @@ function createTextElement(text: string): Partial<React.ReactElement> {
   }
 }
 
-/**
- * A naive recursive implementation. There’s a problem with this recursive call - once we start rendering, 
- * we won’t stop until we have rendered the complete element tree. If the element tree is big, it may block 
- * the main thread for too long. And if the browser needs to do high priority stuff like handling user 
- * input or keeping an animation smooth, it will have to wait until the render finishes.
- */
-// function render(element, container: HTMLElement) {
-//     const dom = element.type === FiberType.TextElement
-//         ? document.createTextNode(element.props.nodeValue)
-//         : document.createElement(element.type);
-
-//     // assign props
-//     Object.keys(element.props)
-//         .filter(key => key !== "children")
-//         .forEach(key => dom[key] = element.props[key]);
-
-//     element.props.children.forEach(child => render(child, container));
-
-//     container.append(dom);
-// }
-
-function createDom(fiber: Fiber): HTMLElement | Text {
-  const dom = fiber.type === FiberType.TextElement
+function createDomNode(fiber: Fiber): HTMLElement | Text {
+  const domNode = fiber.type === FiberType.TextElement
     ? document.createTextNode(fiber.props.nodeValue)
     : document.createElement(fiber.type as unknown as FiberType);
 
-  updateDom(dom, {}, fiber.props);
+  updateDom(domNode, {}, fiber.props);
 
-  return dom;
+  return domNode;
+}
+
+/**
+ * Compare the props from the old fiber to the props of the new fiber,
+ * remove the props that are gone, and set the props that are new or changed.
+ */
+const isEvent = key => key.startsWith("on");
+const isProperty = key => key !== "children" && !isEvent(key);
+const isNew = (prev, next) => key => prev[key] !== next[key];
+const isGone = (prev, next) => key => !(key in next);
+
+function updateDom(domNode: DomNode, prevProps, nextProps) {
+  //Remove old or changed event listeners
+  Object.keys(prevProps)
+    .filter(isEvent)
+    .filter(
+      key =>
+        !(key in nextProps) ||
+        isNew(prevProps, nextProps)(key)
+    )
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2);
+      domNode.removeEventListener(
+        eventType,
+        prevProps[name]
+      );
+    });
+
+  // Remove old properties
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isGone(prevProps, nextProps))
+    .forEach(name => {
+      domNode[name] = "";
+    });
+
+  // Set new or changed properties
+  Object.keys(nextProps)
+    .filter(isProperty)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      domNode[name] = nextProps[name]
+    });
+
+  // Add event listeners
+  Object.keys(nextProps)
+    .filter(isEvent)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2);
+      domNode.addEventListener(
+        eventType,
+        nextProps[name]
+      );
+    });
 }
 
 interface DidactState {
@@ -129,11 +167,11 @@ export const didactState = {} as DidactState;
 
 /**
  * A concurrent render implementation. We break the world into small units of work, called fibers.
- * We'll have one fiber for each element. After we finish each unit, we lett he browser interrupt
+ * We'll have one fiber for each element. After we finish each unit, we let the browser interrupt
  * the rendering if there's anything else that needs to be done. We use requestIdleCallback to 
  * make this loop.
  */
-export function render(element: React.ReactElement, container: Dom) {
+export function render(element: React.ReactElement, container: DomNode) {
   didactState.wipRoot = {
     dom: container,
     props: {
@@ -148,7 +186,7 @@ export function render(element: React.ReactElement, container: Dom) {
   didactState.deletions = [];
   didactState.nextUnitOfWork = didactState.wipRoot;
 }
-
+      
 function commitRoot() {
   didactState.deletions.forEach(commitWork);
   if (didactState.wipRoot) {
@@ -158,65 +196,7 @@ function commitRoot() {
   didactState.wipRoot = null;
 }
 
-/**
- * Compare the props from the old fiber to the props of the new fiber,
- * remove the props that are gone, and set the props that are new or changed.
- */
-const isEvent = key => key.startsWith("on");
-const isProperty = key => key !== "children" && !isEvent(key);
-const isNew = (prev, next) => key => prev[key] !== next[key];
-const isGone = (prev, next) => key => !(key in next);
-function updateDom(dom: Dom, prevProps, nextProps) {
-  //Remove old or changed event listeners
-  Object.keys(prevProps)
-    .filter(isEvent)
-    .filter(
-      key =>
-        !(key in nextProps) ||
-        isNew(prevProps, nextProps)(key)
-    )
-    .forEach(name => {
-      const eventType = name
-        .toLowerCase()
-        .substring(2);
-      dom.removeEventListener(
-        eventType,
-        prevProps[name]
-      );
-    });
-
-  // Remove old properties
-  Object.keys(prevProps)
-    .filter(isProperty)
-    .filter(isGone(prevProps, nextProps))
-    .forEach(name => {
-      dom[name] = "";
-    });
-
-  // Set new or changed properties
-  Object.keys(nextProps)
-    .filter(isProperty)
-    .filter(isNew(prevProps, nextProps))
-    .forEach(name => {
-      dom[name] = nextProps[name]
-    });
-
-  // Add event listeners
-  Object.keys(nextProps)
-    .filter(isEvent)
-    .filter(isNew(prevProps, nextProps))
-    .forEach(name => {
-      const eventType = name
-        .toLowerCase()
-        .substring(2);
-      dom.addEventListener(
-        eventType,
-        nextProps[name]
-      );
-    });
-}
-
-function commitDeletion(fiber: Fiber, domParent: Dom) {
+function commitDeletion(fiber: Fiber, domParent: DomNode) {
   if (fiber.dom) {
     domParent.removeChild(fiber.dom)
   } else {
@@ -248,22 +228,6 @@ function commitWork(fiber: Fiber) {
   commitWork(fiber.child);
   commitWork(fiber.sibling);
 }
-
-function workLoop(deadline: RequestIdleCallbackDeadline) {
-  let shouldYield = false;
-  while (didactState.nextUnitOfWork && !shouldYield) {
-    didactState.nextUnitOfWork = performUnitOfWork(didactState.nextUnitOfWork);
-    shouldYield = deadline.timeRemaining() < 1;
-  }
-
-  if (!didactState.nextUnitOfWork && didactState.wipRoot) {
-    commitRoot();
-  }
-
-  window.requestIdleCallback(workLoop);
-}
-
-window.requestIdleCallback(workLoop);
 
 /**
  * One of the goals of the fiber data structure is to make it easy to find the next unit 
@@ -299,23 +263,27 @@ function performUnitOfWork(fiber: Fiber) {
 
 function updateFunctionComponent(fiber: Fiber) {
   didactState.wipFiber = fiber;
-  didactState.hookIndex = 0;
   didactState.wipFiber.hooks = [];
+  didactState.hookIndex = 0;
 
+  // invoke the function with props to get children
   const children = [(fiber.type as Function)(fiber.props)]
+  
   reconcileChildren(fiber, children)
 }
 
 
 function updateHostComponent(fiber: Fiber) {
   if (!fiber.dom) {
-    fiber.dom = createDom(fiber)
+    fiber.dom = createDomNode(fiber)
   }
   reconcileChildren(fiber, fiber.props.children)
 }
 
 /**
- * Here we will reconcile the old fibers with the new elements. 
+ * Here we will reconcile the old fibers with the new elements. Note that this
+ * is where we update the child and sibling properties on the fiber, preventing
+ * the workloop from ending prematurely. 
  */
 function reconcileChildren(wipFiber: Fiber, elements: React.ReactElement[]) {
   let index = 0;
@@ -373,3 +341,44 @@ function reconcileChildren(wipFiber: Fiber, elements: React.ReactElement[]) {
     index++
   }
 }
+
+function workLoop(deadline: RequestIdleCallbackDeadline) {
+  let shouldYield = false;
+  
+  while (didactState.nextUnitOfWork && !shouldYield) {
+    didactState.nextUnitOfWork = performUnitOfWork(didactState.nextUnitOfWork);
+    shouldYield = deadline.timeRemaining() < 1;
+  }
+
+  if (!didactState.nextUnitOfWork && didactState.wipRoot) {
+    commitRoot();
+  }
+
+  window.requestIdleCallback(workLoop);
+}
+
+window.requestIdleCallback(workLoop);
+
+
+/**
+ * A naive recursive implementation. There’s a problem with this recursive call - once we start rendering,
+ * we won’t stop until we have rendered the complete element tree. If the element tree is big, it may block
+ * the main thread for too long. And if the browser needs to do high priority stuff like handling user
+ * input or keeping an animation smooth, it will have to wait until the render finishes.
+ */
+/*
+function render(element, container: HTMLElement) {
+    const dom = element.type === FiberType.TextElement
+        ? document.createTextNode(element.props.nodeValue)
+        : document.createElement(element.type);
+
+    // assign props
+    Object.keys(element.props)
+        .filter(key => key !== "children")
+        .forEach(key => dom[key] = element.props[key]);
+
+    element.props.children.forEach(child => render(child, container));
+
+    container.append(dom);
+}
+*/
