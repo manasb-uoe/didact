@@ -1,6 +1,23 @@
 import './index.css';
-import { App, Didact } from './didact';
 import * as serviceWorker from './serviceWorker';
+import * as React from 'react';
+import Didact from './didact';
+
+/** @jsx Didact.createElement */
+function Counter() {
+  const [state, setState] = Didact.useState(1);
+
+  return (
+    <div>
+      <h1>
+        Count: {state}
+      </h1>
+      <button onClick={() => setState(c => c + 1)}>Increment counter</button>
+    </div>
+  )
+}
+
+const App = <Counter />;
 
 const root = document.getElementById('root');
 if (!root) throw new Error('root not found in DOM');
