@@ -1,6 +1,6 @@
 import { didactState } from "../core";
 
-export function useState(initial) {
+export function useState<T>(initial: T): [T, (action: (prevState: T) => T) => void] {
   const oldHook =
     didactState.wipFiber.alternate &&
     didactState.wipFiber.alternate.hooks &&

@@ -6,13 +6,15 @@ import Didact from './didact';
 /** @jsx Didact.createElement */
 function Counter() {
   const [count, setCount] = Didact.useState(1);
+  const memoizedValue = Didact.useMemo(() => count*2, [count]);
+  
   Didact.useEffect(() => {
-    console.log('called effect');
-  }, count);
+    console.log('memouzed value changed', memoizedValue);
+  }, [memoizedValue]);
 
   return (
     <div>
-      <h1 style={{color: "red !important", fontWeight: "lighter"}}>
+      <h1 style={{ color: "red !important", fontWeight: "lighter" }}>
         Count: {count}
       </h1>
       <button onClick={() => setCount(c => c + 1)}>Increment counter</button>
