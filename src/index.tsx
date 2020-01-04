@@ -7,10 +7,15 @@ import Didact from './didact';
 function Counter() {
   const [count, setCount] = Didact.useState(1);
   const memoizedValue = Didact.useMemo(() => count*2, [count]);
+  const memoizedCallback = Didact.useCallback(() => console.log('my count is', count), []);
   
   Didact.useEffect(() => {
     console.log('memouzed value changed', memoizedValue);
   }, [memoizedValue]);
+
+  Didact.useEffect(() => {
+    memoizedCallback();
+  }, [memoizedCallback]);
 
   return (
     <div>
