@@ -3,6 +3,7 @@ import { useState } from './hooks/use-state';
 import { useEffect } from './hooks/use-effect';
 import { useMemo } from './hooks/use-memo';
 import { useCallback } from './hooks/use-callback';
+import { useRef } from './hooks/use-ref';
 
 const Didact = {
   render,
@@ -10,7 +11,8 @@ const Didact = {
   useState,
   useEffect,
   useMemo,
-  useCallback
+  useCallback,
+  useRef
 }
 
 export default Didact;

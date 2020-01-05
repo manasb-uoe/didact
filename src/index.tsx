@@ -2,13 +2,15 @@ import './index.css';
 import * as serviceWorker from './serviceWorker';
 import * as React from 'react';
 import Didact from './didact';
+import { useEffect } from './hooks/use-effect';
 
 /** @jsx Didact.createElement */
 function Counter() {
   const [count, setCount] = Didact.useState(1);
-  const memoizedValue = Didact.useMemo(() => count*2, [count]);
+  const memoizedValue = Didact.useMemo(() => count * 2, [count]);
   const memoizedCallback = Didact.useCallback(() => console.log('my count is', count), []);
-  
+  const ref = Didact.useRef(1);
+
   Didact.useEffect(() => {
     console.log('memouzed value changed', memoizedValue);
   }, [memoizedValue]);
@@ -16,6 +18,10 @@ function Counter() {
   Didact.useEffect(() => {
     memoizedCallback();
   }, [memoizedCallback]);
+
+  useEffect(() => {
+    console.log('ref value', ref.current);
+  }, [ref.current]);
 
   return (
     <div>
