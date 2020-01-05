@@ -2,4 +2,5 @@ In addition to the [walkthrough](https://pomb.us/build-your-own-react/), this re
 - `useEffect` hook
 - `useMemo` hook
 - `useCallback` hook
+- `useRef` hook
 - Support for passing an object to `style` prop
